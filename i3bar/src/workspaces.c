@@ -164,6 +164,8 @@ static int workspaces_string_cb(void *params_, const unsigned char *val, size_t 
         }
 
         FREE(output_name);
+        FREE(params->cur_key);
+
         return 1;
     }
 
@@ -181,6 +183,7 @@ static int workspaces_start_map_cb(void *params_) {
 
     if (params->cur_key == NULL) {
         new_workspace = smalloc(sizeof(i3_ws));
+        new_workspace->id = 0;
         new_workspace->num = -1;
         new_workspace->name = NULL;
         new_workspace->visible = 0;
@@ -223,6 +226,8 @@ static yajl_callbacks workspaces_callbacks = {
  *
  */
 void parse_workspaces_json(const unsigned char *json, size_t size) {
+    DLOG("Got ws json: %.*s\n", (int)size, (const char *)json);  // TODO: delete
+
     free_workspaces();
 
     struct workspaces_json_params params;
@@ -239,7 +244,12 @@ void parse_workspaces_json(const unsigned char *json, size_t size) {
         case yajl_status_client_canceled:
         case yajl_status_error:
             ELOG("Could not parse workspaces reply!\n");
-            exit(EXIT_FAILURE);
+            if (config.workspace_command) {
+                kill_ws_child();
+                // TODO: set statusline error or restart child
+            } else {
+                exit(EXIT_FAILURE);
+            }
             break;
     }
 
