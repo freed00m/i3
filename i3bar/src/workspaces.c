@@ -181,15 +181,8 @@ static int workspaces_start_map_cb(void *params_) {
     struct workspaces_json_params *params = (struct workspaces_json_params *)params_;
 
     if (params->cur_key == NULL) {
-        i3_ws *new_workspace = smalloc(sizeof(i3_ws));
-        new_workspace->id = 0;
+        i3_ws *new_workspace = scalloc(1, sizeof(i3_ws));
         new_workspace->num = -1;
-        new_workspace->name = NULL;
-        new_workspace->visible = 0;
-        new_workspace->focused = 0;
-        new_workspace->urgent = 0;
-        memset(&new_workspace->rect, 0, sizeof(rect));
-        new_workspace->output = NULL;
 
         params->workspaces_walk = new_workspace;
         params->need_output = true;

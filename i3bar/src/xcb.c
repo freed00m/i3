@@ -517,8 +517,9 @@ static void focus_workspace(i3_ws *ws) {
     size_t namelen = 0;
     const char *utf8_name = ws->canonical_name;
     for (const char *walk = utf8_name; *walk != '\0'; walk++) {
-        if (*walk == '"' || *walk == '\\')
+        if (*walk == '"' || *walk == '\\') {
             num_quotes++;
+        }
         /* While we’re looping through the name anyway, we can save one
          * strlen(). */
         namelen++;
