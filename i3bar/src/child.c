@@ -143,7 +143,7 @@ __attribute__((format(printf, 1, 2))) static void set_statusline_error(const cha
     TAILQ_INSERT_TAIL(&statusline_head, message_block, blocks);
 
 finish:
-    FREE(message);
+    free(message);
     va_end(args);
 }
 
@@ -562,6 +562,46 @@ void repeat_last_ws_json(void) {
 }
 
 /*
+ * Wrapper around set_workspace_button_error to mimic the call of
+ * set_statusline_error.
+ */
+__attribute__((format(printf, 1, 2))) static void set_workspace_button_error_f(const char *format, ...) {
+    char *message;
+    va_list args;
+    va_start(args, format);
+    if (vasprintf(&message, format, args) == -1) {
+        goto finish;
+    }
+
+    set_workspace_button_error(message);
+
+finish:
+    free(message);
+    va_end(args);
+}
+
+/*
+ * Replaces the workspace buttons with an error message.
+ */
+void set_workspace_button_error(const char *message) {
+    free_workspaces();
+
+    char *name = NULL;
+    sasprintf(&name, "Error: %s", message);
+
+    i3_ws *fake_ws = scalloc(1, sizeof(i3_ws));
+    /* Don't set the canonical_name field to make this workspace unfocusable. */
+    fake_ws->name = i3string_from_utf8(name);
+    fake_ws->num = -1;
+    fake_ws->urgent = fake_ws->visible = true;
+    fake_ws->name_width = predict_text_width(fake_ws->name);
+    i3_output *output = fake_ws->output = SLIST_FIRST(outputs);
+
+    /* TAILQ_FOREACH(output) */
+    TAILQ_INSERT_TAIL(output->workspaces, fake_ws, tailq);
+}
+
+/*
  * We received a SIGCHLD, meaning, that the child process terminated.
  * We simply free the respective data structures and don't care for input
  * anymore
@@ -574,13 +614,16 @@ static void child_sig_cb(struct ev_loop *loop, ev_child *watcher, int revents) {
          watcher->pid,
          exit_status);
 
+    void (*error_function_pointer)(const char *, ...) = NULL;
     const char *command_type = "";
     i3bar_child *c = NULL;
     if (watcher->pid == child.pid) {
         command_type = "status_command";
+        error_function_pointer = set_statusline_error;
         c = &child;
     } else if (watcher->pid == ws_child.pid) {
         command_type = "workspace_command";
+        error_function_pointer = set_workspace_button_error_f;
         c = &ws_child;
     } else {
         ELOG("Unknown pid?\n");
@@ -591,11 +634,11 @@ static void child_sig_cb(struct ev_loop *loop, ev_child *watcher, int revents) {
     /* this error is most likely caused by a user giving a nonexecutable or
      * nonexistent file, so we will handle those cases separately. */
     if (exit_status == 126) {
-        set_statusline_error("%s is not executable (exit %d)", command_type, exit_status);
+        error_function_pointer("%s is not executable (exit %d)", command_type, exit_status);
     } else if (exit_status == 127) {
-        set_statusline_error("%s not found or is missing a library dependency (exit %d)", command_type, exit_status);
+        error_function_pointer("%s not found or is missing a library dependency (exit %d)", command_type, exit_status);
     } else {
-        set_statusline_error("%s process exited unexpectedly (exit %d)", command_type, exit_status);
+        error_function_pointer("%s process exited unexpectedly (exit %d)", command_type, exit_status);
     }
 
     cleanup(c);

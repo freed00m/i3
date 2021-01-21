@@ -509,6 +509,10 @@ static void focus_workspace(i3_ws *ws) {
         goto done;
     }
 
+    if (ws->canonical_name == NULL) {
+        return;
+    }
+
     /* To properly handle workspace names with double quotes in them, we need
      * to escape the double quotes. Unfortunately, that’s rather ugly in C: We
      * first count the number of double quotes, then we allocate a large enough

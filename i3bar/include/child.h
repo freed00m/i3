@@ -120,3 +120,8 @@ void send_block_clicked(int button, const char *name, const char *instance, int 
 
 // TODO
 void repeat_last_ws_json(void);
+
+/*
+ * Replaces the workspace buttons with an error message.
+ */
+void set_workspace_button_error(const char *message);

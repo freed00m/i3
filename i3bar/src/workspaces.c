@@ -258,7 +258,7 @@ void parse_workspaces_json(const unsigned char *json, size_t size) {
             ELOG("Could not parse workspaces reply!\n");
             if (config.workspace_command) {
                 kill_ws_child();
-                // TODO: set statusline error or restart child
+                set_workspace_button_error("Could not parse workspace_command's JSON");
             } else {
                 exit(EXIT_FAILURE);
             }
